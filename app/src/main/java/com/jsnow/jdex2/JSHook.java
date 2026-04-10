@@ -188,6 +188,9 @@ public class JSHook implements IXposedHookLoadPackage {
 
     private String[] getAllClassName(DexFile dexFile, List<String> whiteList, List<String> blackList) {
         Object mCookie = XposedHelpers.getObjectField(dexFile, "mCookie");
+        if(mCookie==null){
+            return null;
+        }
         String[] classes = (String[]) XposedHelpers.callStaticMethod(
                 DexFile.class, "getClassNameList", mCookie);
         List<String> filtered = new ArrayList<>();
@@ -311,8 +314,6 @@ public class JSHook implements IXposedHookLoadPackage {
         new Thread(() -> {
             try {
                 Thread.sleep(3000);
-                ensureNativeLoaded();
-                if (!nativeLoaded) return;
                 doDump(loader, outDir, whiteList, blackList);
                 dumped.set(true);
             } catch (Throwable t) {
@@ -330,6 +331,9 @@ public class JSHook implements IXposedHookLoadPackage {
                     continue;
                 }
                 String[] names = getAllClassName(dexFile, whiteList, blackList);
+                if(names == null){
+                    return;
+                }
                 if(invokeConstructors){
                     invokeAllConstructors(names, loader, blackList);
                 }
@@ -411,8 +415,6 @@ public class JSHook implements IXposedHookLoadPackage {
         for(String white : whiteList){
             Log.e(TAG, "White List: " + white);
         }
-        Log.d(TAG,"list ok");
-
         // 对包名和线程名都做过滤，否则会导致对新开的线程也进行脱壳
         if (!loadPackageParam.processName.equals(targetApp))
             return;
@@ -533,6 +535,9 @@ public class JSHook implements IXposedHookLoadPackage {
                                     continue;
                                 }
                                 String[] names = getAllClassName(dexFile, whiteList, blackList);
+                                if(names == null){
+                                    continue;
+                                }
                                 if (invokeConstructors) {
                                     // 只有未 dump 过的 DEX 才需要主动调用触发回填
                                     invokeAllConstructors(names, (BaseDexClassLoader) realLoader, blackList);
